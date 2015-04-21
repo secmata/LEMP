@@ -1,0 +1,237 @@
+DOWNLOAD SITE
+http://www.ubuntu.com/download/server	
+
+GO TO ROOT DIRECTORY
+sudo bash
+
+HOW TO INSTALL LINUX, NGINX, MYSQL, PHP (LEMP) STACK ON UBUNTU 14.04
+https://www.digitalocean.com/community/tutorials/how-to-install-linux-nginx-mysql-php-lemp-stack-on-ubuntu-14-04
+
+1 INSTALL THE NGINX - WEB SERVER
+sudo apt-get update
+sudo apt-get install nginx
+TEST IF THE SERVER IS RUNNING
+ip addr show eth0 | grep inet | awk '{ print $2; }' | sed 's/\/.*$//' 
+curl http://icanhazip.com
+TEST IN YOUR BROWSER
+http://server_domain_name_or_IP
+
+2 INSTALL MYSQL - MANAGE SITE DATA 
+sudo apt-get install mysql-server
+sudo mysql_install_db
+sudo mysql_secure_installation
+
+3 INSTALL PHP – PROCESSING
+sudo apt-get install php5-fpm php5-mysql
+CONFIGURE THE PHP PROCESSOR
+sudo nano /etc/php5/fpm/php.ini
+cgi.fix_pathinfo=0
+sudo service php5-fpm restart
+
+4 INSTALL PHPMYADMIN
+https://www.digitalocean.com/community/tutorials/how-to-install-and-secure-phpmyadmin-with-nginx-on-an-ubuntu-14-04-server
+sudo apt-get update
+sudo apt-get install phpmyadmin
+
+sudo ln -s /usr/share/phpmyadmin /usr/share/nginx/html
+
+sudo php5enmod mcrypt
+sudo service php5-fpm restart
+
+
+CREATE SAMBA FILE SERVER IN UBUNTU 14.04
+https://www.liberiangeek.net/2014/07/ubuntu-tips-create-samba-file-server-ubuntu-14-04/
+
+CREATE A DIRECTORY
+mkdir /home/sample
+INSTALL SAMBA IN UBUNTU 14.04
+sudo apt-get install -y samba samba-common python-glade2 system-config-samba
+SAMBA CONFIGURATION
+cd /etc/samba
+vi smb.conf	
+
+press i to start editing
+
+[sample]
+ comment = sample
+ path = /home/sample
+ read only = no
+ available = yes
+ browseable = yes
+ public = yes
+ writable = yes
+ guest ok = yes
+
+press <Esc> key then :wq! to save
+
+service smbd restart
+CHANGE PERMISSION
+cd /home
+chmod -R 777 sample/
+HOW TO SET UP NGINX SERVER BLOCK (VIRTUAL HOSTS) ON UBUNTU 14.04 LTS
+https://www.digitalocean.com/community/tutorials/how-to-set-up-nginx-server-blocks-virtual-hosts-on-ubuntu-14-04-lts
+
+CREATE SERVER BLOCK FILE FOR DOMAIN TO USE OUR PHP PROCESSOR
+mkdir /home/nginx-logs
+cd /etc/nginx/sites-available
+ls -al
+sudo nano sample
+
+WEB BLOCK
+
+server {
+    listen 80;
+    listen [::]:80;
+
+    root /home/sample;
+    index index.php;
+
+    server_name app.sample.dev;
+
+    access_log /home/nginx-logs/sample_access.log;
+    error_log /home/nginx-logs/sample_error.log;
+
+    if (!-e $request_filename){
+        rewrite ^/(.*)$ /index.php?/$1 last;
+        break;
+    }
+
+    location ^~ /assets/ {
+       root /home/sample;
+    }
+
+    error_page 404 /404.html;
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+       root /home/sample;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        #fastcgi_pass   127.0.0.1:9000;
+	 fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param  SCRIPT_FILENAME /home/sample/index.php;
+        fastcgi_param  PATH_INFO $document_uri;
+        include fastcgi_params;
+    }
+}
+PHPMYADMIN BLOCK
+server{
+        listen   80;
+        listen [::]:80;
+
+        server_name app.phpmyadmin.dev;
+
+        access_log /home/nginx-logs/phpmyadmin_access.log;
+        error_log /home/nginx-logs/phpmyadmin_error.log;
+
+        root   /usr/share/phpmyadmin;
+        index  index.php;
+
+        location / {
+        try_files $uri $uri/ @phpmyadmin;
+        }
+
+        location @phpmyadmin {
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME /usr/share/phpmyadmin/index.php;
+        include /etc/nginx/fastcgi_params;
+        fastcgi_param SCRIPT_NAME /index.php;
+        }
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_index  index.php;
+        fastcgi_param  SCRIPT_FILENAME  /usr/share/phpmyadmin$fastcgi_script_name;
+        include        fastcgi_params;
+        }
+}
+
+ENABLE SERVER BLOCK 
+cd ..
+cd sites-enabled
+sudo ln -s /etc/nginx/sites-available/sample sample
+sudo service nginx reload
+DISABLE DEFAULT SERVER BLOCK
+sudo rm /etc/nginx/sites-enabled/default
+ADJUST NGINX SETTINGS
+sudo nano /etc/nginx/nginx.conf
+server_names_hash_bucket_size 64;
+sudo service nginx restart
+SET UP LOCAL HOSTS FILE
+C:\Windows\System32\Drivers\etc
+notepad C:\Windows\System32\drivers\etc\hosts – cmd command
+192.168.254.102   app.sample.dev
+TEST IN YOUR BROWSER
+http://app.sample.dev/
+SET STATIC IP TO UBUNTU 14.04
+http://www.simpleprecision.com/how-to-set-a-static-ip-to-ubuntu-14-04-server/
+
+note: in changing your ip address check first your ip 192.168.___.1  and use it.
+sudo nano /etc/network/interfaces
+
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto eth0
+
+# DHCP not needed
+# iface eth0 inet dhcp
+iface eth0 inet static
+address 192.168.1.50
+netmask 255.255.255.0
+network 192.168.1.0
+broadcast 192.168.1.255
+gateway 192.168.1.1
+dns-nameservers 8.8.8.8
+
+Save and exit.
+
+$sudo nano /etc/resolv.conf
+Add:
+nameserver 192.168.1.1
+nameserver 8.8.8.8
+search mynetwork.local
+
+Save and exit.
+
+Edit /etc/hosts
+
+$sudo nano /etc/hosts
+Add:
+192.168.1.50     u1404server.mynetwork.local      u1404server
+
+Save and exit:
+
+Reload (start and stop) network
+$sudo ifdown eth0 && sudo ifup eth0
+
+DEBUGING
+sudo nano /etc/php5/fpm/php.ini
+display_startup_errors = On
+display_errors = On
+error_reporting = E_ALL
+sudo service php5-fpm restart
+
+
+cgi.fix_pathinfo=1
+
+tail
+http://articles.slicehost.com/2010/8/27/reading-nginx-web-logs
+sudo tail -n 100 /home/nginx-logs/sample_access.log
+
+sudo service nginx configtest
+
+
+import to database
+ mysql -u root -p eric < eric_dev.sql
+
